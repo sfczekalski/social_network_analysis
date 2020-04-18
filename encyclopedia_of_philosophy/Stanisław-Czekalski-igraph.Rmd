@@ -1,0 +1,84 @@
+---
+title: "Stanford Encyclopedia of Philosophy"
+author: "Stanisław Czekalski"
+date: "April 3, 2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(igraph)
+library(tinytex)
+setwd("/home/sfczekalski/Documents/SNA/encyclopedia_of_philosophy")
+```
+
+I've chosen Stanford Encyclopedia of Philosophy dataset. Let's see if network science can tell us something about philosophy!
+
+```{r load}
+links <- read.csv("1998_fall_edge_list.txt", header=T, as.is=T)
+
+net <- graph_from_data_frame(links, directed=T) 
+net <- simplify(net, remove.multiple = F, remove.loops = T) 
+```
+
+```{r plot}
+l <- layout_with_kk(net)
+deg <- degree(net, mode="all")
+
+
+V(net)$size <- deg * 0.5 + 5
+V(net)$color="tomato"
+V(net)$frame.color="white"
+V(net)$label.cex <- deg * 0.02 + 0.7
+V(net)$label.color="black"
+
+E(net)$arrow.size=.3
+E(net)$color="grey"
+E(net)$curved=0
+
+plot(net, rescale=F, layout = l*0.25)
+```
+
+We can see that the graph consists of big connected component, with philosophers and their interests. There are also smaller components, for example the one with cognitive science and Turing machine or a small clique of game theory and prisoners dilemma.
+
+Let's zoom in the biggest connected component.
+
+```{r plot_zoom}
+l <- layout_with_kk(net)
+
+plot(net, rescale=F, layout=l*0.5)
+
+```
+
+Russel seems to be really important from this network. It has the highest degree, he also seems ti gather together a lot of topics. 
+
+We can also see some interesting structures, like a "truth clique", or a branch with Kierkegaard and Hegel, debating over existance.
+
+```{r histogram}
+hist(deg, breaks=1:vcount(net)-1, main="Node degree")
+```
+
+Most of the nodes have a low degree. The highest observed degree is 27, belonging to Russel.
+
+```{r path}
+diam <- get_diameter(net, directed=T)
+vcol <- rep("gray40", vcount(net))
+vcol[diam] <- "gold"
+ecol <- rep("gray80", ecount(net))
+ecol[E(net, path=diam)] <- "orange" 
+
+plot(net, vertex.color=vcol, vertex.size=10, edge.color=ecol, edge.arrow.mode=0, rescale=F, layout=l*0.5,
+     xlim = c(-1, -0.3), ylim = c(-0.25, 1.9), main="Graph diameter")
+```
+
+
+There is no longer distance than from truth-identity to original-position.
+
+Communities found by edge betweenness can be seen below. Some of them are connected to others, but there is a few communities, that are separate. The biggest of them is "cognitive science" community, with nodes such as mental-imagintery or Turing machine. There is also mathematics community, plotted next to it, or stoicism + skepticism-ancient community.
+
+```{r communties}
+ceb <- cluster_edge_betweenness(net) 
+plot(ceb, net, label.dist=1, vertex.size=0, vertex.label.cex=0.75) 
+```
